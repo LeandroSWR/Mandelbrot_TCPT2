@@ -7,8 +7,8 @@ namespace Mandelbrot_TCPT2
 {
     internal class Mandelbrot
     {
-        private const int width = 1024;
-        private const int height = 1024;
+        private const int width = 4096;
+        private const int height = 4096;
         
         public List<MandelbrotStats> MStats { get; set; }
         private List<MandelbrotStats> benchStats;
