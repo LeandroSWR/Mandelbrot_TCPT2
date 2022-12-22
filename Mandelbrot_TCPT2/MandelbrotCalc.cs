@@ -33,8 +33,9 @@ namespace Mandelbrot_TCPT2
         /// <summary>
         /// Renders the mandelbrot set to an end image
         /// </summary>
-        /// <returns>The time it toke to calculate the set</returns>
-        public long RenderMandelbrotSet()
+        /// <param name="time">The time it takes to calculate the set</param>
+        /// <param name="bmp">The final image</param>
+        public void RenderMandelbrotSet(ref long time, ref Bitmap bmp)
         {
             // Start a new Stopwatch to get the time it takes for the calculations
             Stopwatch sw = Stopwatch.StartNew();
@@ -43,33 +44,23 @@ namespace Mandelbrot_TCPT2
             float[,] iterations = Calculate();
 
             // Save the current time
-            long time = sw.ElapsedMilliseconds;
+            time = sw.ElapsedMilliseconds;
             
             // Stop the StopWatch
             sw.Stop();
-            
-            // Create a new Bitmap object with the specified width and height
-            using (Bitmap bitmap = new Bitmap(width, height))
+
+            // Iterate over each pixel in the image
+            for (int x = 0; x < width; x++)
             {
-                // Iterate over each pixel in the image
-                for (int x = 0; x < width; x++)
+                for (int y = 0; y < height; y++)
                 {
-                    for (int y = 0; y < height; y++)
-                    {
-                        // Retrieve the corresponding value from the iterations array
-                        float iteration = iterations[x, y];
+                    // Retrieve the corresponding value from the iterations array
+                    float iteration = iterations[x, y];
 
-                        // Map the iteration value to a color using MapColor()
-                        Color color = MapColor(iteration);
-                        bitmap.SetPixel(x, y, color);
-                    }
+                    // Map the iteration value to a color using MapColor()
+                    Color color = MapColor(iteration);
+                    bmp.SetPixel(x, y, color);
                 }
-                // Save the image to a file and open the file using the default image viewer
-                bitmap.Save("mandelbrot.png", System.Drawing.Imaging.ImageFormat.Png);
-                Process.Start(new ProcessStartInfo(@"mandelbrot.png") { UseShellExecute = true });
-
-                // Return the Bitmap object
-                return time;
             }
         }
 

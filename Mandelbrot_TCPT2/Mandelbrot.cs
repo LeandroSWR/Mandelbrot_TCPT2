@@ -1,11 +1,14 @@
 ﻿using Newtonsoft.Json;
+using System.Diagnostics;
+using System.Drawing;
+using System.Runtime.InteropServices;
 
 namespace Mandelbrot_TCPT2
 {
     internal class Mandelbrot
     {
-        private const int width = 4096;
-        private const int height = 4096;
+        private const int width = 1024;
+        private const int height = 1024;
         
         public List<MandelbrotStats> MStats { get; set; }
         private List<MandelbrotStats> benchStats;
@@ -42,36 +45,53 @@ namespace Mandelbrot_TCPT2
             File.WriteAllText("mStats.json", jsonString);
         }
 
-        public void CalculateMandelParallel()
+        public void CalculateMandelParallel(bool isBench = false)
         {
+            long time = 0;
+            Bitmap bmp = new Bitmap(width, height);
             MandelbrotCalcParallel parallelCalc = new MandelbrotCalcParallel(width, height, 1000, 1.35f);
-            long time = parallelCalc.RenderMandelbrotSet();
+            parallelCalc.RenderMandelbrotSet(ref time, ref bmp);
 
-            Console.WriteLine("Parallel Mandelbrot calculations took {0} ms", time.ToString("0.00"));
+            HandleResult(time, bmp, "Parallel", isBench);
+        }
 
-            // Save Data
+        public void CalculateMandelLinear(bool isBench = false)
+        {
+            long time = 0;
+            Bitmap bmp = new Bitmap(width, height);
+            MandelbrotCalc linearCalc = new MandelbrotCalc(width, height, 1000, 1.35f);
+            linearCalc.RenderMandelbrotSet(ref time, ref bmp);
+
+            HandleResult(time, bmp, "Linear", isBench);
+        }
+
+        private void HandleResult(long time, Bitmap bmp, string type, bool isBench)
+        {
+            Console.WriteLine($"{type} Mandelbrot calculations took {time:0.00} ms");
+
+            // Add the data to the stats list
             MandelbrotStats stat =
-                new MandelbrotStats(time, string.Format($"{width}x{height}"), true);
+                new MandelbrotStats(time, string.Format($"{width}x{height}"), type == "Parallel");
             MStats.Add(stat);
             benchStats.Add(stat);
 
+            if (!isBench)
+            {
+                DisplayMandelbrot(bmp, type);
+            }
+
+            // Save the new Data
             SaveNewData();
         }
 
-        public void CalculateMandelLinear()
+        private void DisplayMandelbrot(Bitmap bmp, string name)
         {
-            MandelbrotCalc linearCalc = new MandelbrotCalc(width, height, 1000, 1.35f);
-            long time = linearCalc.RenderMandelbrotSet();
-
-            Console.WriteLine("Linear Mandelbrot calculations took {0} ms", time.ToString("0.00"));
-
-            // Save Data
-            MandelbrotStats stat =
-                new MandelbrotStats(time, string.Format($"{width}x{height}"), false);
-            MStats.Add(stat);
-            benchStats.Add(stat);
-
-            SaveNewData();
+            if (bmp != null)
+            {
+                // Save the image to a file and open the file using the default image viewer
+                bmp.Save($"{name}.png", System.Drawing.Imaging.ImageFormat.Png);
+                Process.Start(new ProcessStartInfo(@$"{name}.png") { UseShellExecute = true });
+            }
         }
 
         public void RunBenchMark()
@@ -80,13 +100,26 @@ namespace Mandelbrot_TCPT2
 
             for (int i = 0; i < 3; i++)
             {
-                CalculateMandelLinear();
-                CalculateMandelParallel();
+                // `!(i==2)` Makes sure we only render the last image from the benchmark
+                CalculateMandelLinear(!(i == 2));
+                CalculateMandelParallel(!(i == 2));
             }
 
             StatsDisplay.Instance.DisplayStats(benchStats, true);
 
+            // Get the handle of the console window
+            var handle = GetConsoleWindow();
+
+            // Bring the console window to the front
+            SetForegroundWindow(handle);
+
             benchStats.Clear();
         }
+
+        // Import nessessary dll to brind the console into focuse when the benchmark is over
+        [DllImport("user32.dll")]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr GetConsoleWindow();
     }
 }
